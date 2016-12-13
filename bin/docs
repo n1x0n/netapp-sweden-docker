@@ -1,0 +1,28 @@
+#!/usr/bin/bash
+
+TOPIC=$1
+
+if [[ -z $TOPIC ]]
+then
+	echo "Usage: docs TOPIC"
+	echo "Where TOPIC can be one of:"
+	TOPICS=$( ls ${HOME}/docs/*/*.md | sort )
+	for THIS in $TOPICS
+	do
+		THIS=$( basename $THIS | sed 's/.md$//' )
+		echo "   $THIS"
+	done
+	exit 1
+fi
+
+FILE=$( find ${HOME}/docs/ -type f -name ${TOPIC}.md | head -1 )
+if [[ -z "$FILE" ]]
+then
+	echo "No such documentation: $TOPIC"
+	exit 1
+fi
+
+cd $( dirname "$FILE" )
+git pull 
+cat "$( basename "$FILE" )"
+
