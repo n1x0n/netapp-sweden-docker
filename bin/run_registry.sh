@@ -1,5 +1,20 @@
 #!/usr/bin/bash
 
+# This will run a Docker Registry container that uses
+# our local StorageGRID Webscale object store as backend.
+
+# Normally you would never put your secret key in a file like
+# this and push it to Github, but our demo environment is
+# behind our firewall and all data in that tenant is publicly
+# available Docker images so in this case it is ok.
+
+# The image we use is based on registry:2 and the only change
+# is that we added the ca cert from StorageGRID to the
+# certificate bundle. In a production environment you would
+# have a proper certificate installed in StorageGRID and in
+# that case you can use the standard registry:2 image.
+
+
 set -o verbose
 
 docker run --name registry -p 5000:5000 \
