@@ -1,0 +1,59 @@
+#!/usr/bin/bash
+
+INTERVAL=1
+
+declare -a on_exit_items
+
+function on_exit()
+{
+    for i in "${on_exit_items[@]}"
+    do
+        debug "on_exit: $i"
+        eval $i
+    done
+}
+
+function add_on_exit()
+{
+    local n=${#on_exit_items[*]}
+    on_exit_items[$n]="$*"
+    if [[ $n -eq 0 ]]; then
+        debug "Setting trap"
+        trap on_exit EXIT
+    fi
+}
+
+debug() {
+    if [[ $DEBUG = 1 ]]
+    then
+        timestamp "DEBUG: $*" 2<&1
+    fi
+}
+
+timestamp() {
+        END=$(date +%s.%N)
+        DIFF=$(echo "$END - $START" | bc)
+        echo "[$DIFF]   $*"
+}
+
+TEMPFILE=/tmp/monitor.$$.tmp
+add_on_exit rm "$TEMPFILE"
+touch "$TEMPFILE"
+
+CMD=$1
+COMMAND=${@:1}
+if [[ -z $CMD ]]
+then
+    echo "Usage: monitor COMMAND"
+    exit 1
+fi
+
+while true
+do
+    $COMMAND > "$TEMPFILE"
+    clear
+    date; echo
+    cat "$TEMPFILE"
+    sleep $INTERVAL
+done
+

@@ -8,7 +8,11 @@ USER_AND_DB=wordpress01
 # Set the number of clones to create
 # Going above 10 eats up all the memory in our
 # demo environment.
-NUM_CLONES=10
+NUM_CLONES=$1
+if [[ -z $NUM_CLONES ]]
+then
+    NUM_CLONES=10
+fi
 
 # We need to create the volume on all nodes in the swarm.
 NODES=$( docker node ls | grep -v '*' | grep -v '^ID' | awk '{ print $2 }' )
