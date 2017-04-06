@@ -20,7 +20,7 @@ NODES=$( docker node ls | grep -v '*' | grep -v '^ID' | awk '{ print $2 }' )
 
 # Loop that creates all volumes
 COUNTER=1
-while [[ ! $COUNTER -gt $NUM_CLONES ]]
+time while [[ ! $COUNTER -gt $NUM_CLONES ]]
 do
     # Cloning volume for this service.
     docker volume create -d ontap-nas -o snapshotDir=false -o snapshotPolicy=default -o from=percona_orig --name percona_clone_${COUNTER}
@@ -36,7 +36,7 @@ do
         --name percona_clone_${COUNTER} \
         --mount src=percona_clone_${COUNTER},dst=/var/lib/mysql \
         -p ${PORT}:3306 \
-        percona:latest
+        percona:5.7.17
 
     COUNTER=$(( $COUNTER + 1 ))
 done
