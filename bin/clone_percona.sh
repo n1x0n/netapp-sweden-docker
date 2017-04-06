@@ -44,6 +44,7 @@ done
 set +o verbose
 
 echo "
-All databases have the employees sample database loaded, username is netapp and password is changeme.
+The original database has the employees sample database loaded, username is netapp and password is changeme.
+All database clones are exact, space-efficient copies of the original, same data and same accounts.
 "
 

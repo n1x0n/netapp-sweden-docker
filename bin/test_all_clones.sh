@@ -32,24 +32,27 @@ docker run -d --name "${CLONE}_tester" \\
 ============================================================
 "
 
-CLONES=$( docker service ls | grep percona_clone_ | awk '{ print $2 }' | sort -n )
+CLONES=$( docker service ls | grep percona_clone_ | awk '{ print $2 }' | sort -V )
 
 mkdir -p $HOME/sample_data/test_db/results
 rm $HOME/sample_data/test_db/results/* 2>/dev/null
 
 START=$(date +%s.%N)
 
+NUMCLONES=$( echo $CLONES | wc -w )
+printf "Starting $NUMCLONES test containers -> "
 for CLONE in $CLONES
 do
+	printf "#"
 	PORT=$( docker service inspect $CLONE | grep "PublishedPort" | sed 's/,$//' | tail -1 | awk '{ print $NF }' )
-	echo "Testing clone \"$CLONE\" on port $PORT."
-	docker run -d --name "${CLONE}_tester" -v $HOME/sample_data/test_db:/test_db percona:5.7.17 sh -c "/test_db/sql_test.sh 'mysql -h swarm -u netapp -pchangeme -P $PORT' >/test_db/results/${CLONE}_tester.txt; echo '${CLONE}_tester' >>/test_db/results/complete.txt; chown -R 1000:1000 /test_db/results"
-	echo ""
+	docker run -d --name "${CLONE}_tester" -v $HOME/sample_data/test_db:/test_db percona:5.7.17 sh -c "/test_db/sql_test.sh 'mysql -h swarm -u netapp -pchangeme -P $PORT' >/test_db/results/${CLONE}_tester.txt; echo '${CLONE}_tester' >>/test_db/results/complete.txt; chown -R 1000:1000 /test_db/results" >/dev/null &
 done
 
-SPINNER='-\|/'
+echo; echo
+
+echo "Waiting for tests to complete."
 i=0
-NUMCLONES=$( echo $CLONES | wc -w )
+SPINNER='|/-\'
 NUMCOMPLETE=0
 while sleep .2
 do
@@ -89,8 +92,16 @@ do
 	cat $HOME/sample_data/test_db/results/${CLONE}_tester.txt
 done
 
+TIME=$(echo "$END - $START" | bc)
+
+TOTROWS=$( cat ${HOME}/sample_data/test_db/results/*txt | grep '(' | awk ' BEGIN { tot=0 }
+{ tot=tot+$2 }
+END { print tot }' )
+SPEED=$( echo $TOTROWS / $TIME | bc )
+
 echo
-echo "Total time for testing $NUMCLONES clones: $( printf "%.3f" $(echo "$END - $START" | bc) ) seconds"
+echo "Total time for testing $NUMCLONES clones: $( printf "%.3f" $TIME ) seconds"
+echo "($SPEED rows per second, including container startup time.)"
 echo
 
 
