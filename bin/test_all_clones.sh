@@ -40,12 +40,26 @@ rm $HOME/sample_data/test_db/results/* 2>/dev/null
 START=$(date +%s.%N)
 
 NUMCLONES=$( echo $CLONES | wc -w )
-printf "Starting $NUMCLONES test containers -> "
+echo "Starting $NUMCLONES test containers."
+i=1
+COUNTER=0
+SPINNER='|/-\'
+printf "\r(${SPINNER:$i:1}) "
+printf '.%.0s' $CLONES
+printf " ($COUNTER/$NUMCLONES)"
 for CLONE in $CLONES
 do
-	printf "#"
 	PORT=$( docker service inspect $CLONE | grep "PublishedPort" | sed 's/,$//' | tail -1 | awk '{ print $NF }' )
-	docker run -d --name "${CLONE}_tester" -v $HOME/sample_data/test_db:/test_db percona:5.7.17 sh -c "/test_db/sql_test.sh 'mysql -h swarm -u netapp -pchangeme -P $PORT' >/test_db/results/${CLONE}_tester.txt; echo '${CLONE}_tester' >>/test_db/results/complete.txt; chown -R 1000:1000 /test_db/results" >/dev/null &
+	docker run -d --name "${CLONE}_tester" -v $HOME/sample_data/test_db:/test_db percona:5.7.17 sh -c "/test_db/sql_test.sh 'mysql -h swarm -u netapp -pchangeme -P $PORT' >/test_db/results/${CLONE}_tester.txt; echo '${CLONE}_tester' >>/test_db/results/complete.txt; chown -R 1000:1000 /test_db/results" >/dev/null 
+	COUNTER=$(( $COUNTER + 1 ))
+        i=$(( (i+1) %4 ))
+        printf "\r(${SPINNER:$i:1}) "
+	printf '.%.0s' $CLONES
+	printf " ($COUNTER/$NUMCLONES)"
+	printf '\r'
+	TEXT="$TEXT 1"
+        printf "\r(${SPINNER:$i:1}) "
+	printf '#%.0s' $TEXT 
 done
 
 echo; echo
