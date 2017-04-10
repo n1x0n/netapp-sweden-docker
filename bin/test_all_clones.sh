@@ -7,6 +7,9 @@ cd "$( dirname "$TESTCMD" )"
 CLONE=percona_clone_1
 PORT=3309
 
+TEMPDIR="/tmp/test_all_clones.$$.tmp"
+mkdir "$TEMPDIR"
+
 echo "
 This script will find all Percona clone services and run
 the test suite associated with the MySQL employees sample
@@ -50,7 +53,7 @@ printf " ($COUNTER/$NUMCLONES)"
 for CLONE in $CLONES
 do
 	PORT=$( docker service inspect $CLONE | grep "PublishedPort" | sed 's/,$//' | tail -1 | awk '{ print $NF }' )
-	docker run -d --name "${CLONE}_tester" -v $HOME/sample_data/test_db:/test_db percona:5.7.17 sh -c "/test_db/sql_test.sh 'mysql -h swarm -u netapp -pchangeme -P $PORT' >/test_db/results/${CLONE}_tester.txt; echo '${CLONE}_tester' >>/test_db/results/complete.txt; chown -R 1000:1000 /test_db/results" >/dev/null 
+	docker run -d --name "${CLONE}_tester" -v $HOME/sample_data/test_db:/test_db -v ${TEMPDIR}:/var/lib/mysql -v ${TEMPDIR}:/var/log/mysql percona:5.7.17 sh -c "/test_db/sql_test.sh 'mysql -h swarm -u netapp -pchangeme -P $PORT' >/test_db/results/${CLONE}_tester.txt; echo '${CLONE}_tester' >>/test_db/results/complete.txt; chown -R 1000:1000 /test_db/results" >/dev/null
 	COUNTER=$(( $COUNTER + 1 ))
         i=$(( (i+1) %4 ))
         printf "\r(${SPINNER:$i:1}) "
@@ -118,4 +121,4 @@ echo "Total time for testing $NUMCLONES clones: $( printf "%.3f" $TIME ) seconds
 echo "($SPEED rows per second, including container startup time.)"
 echo
 
-
+rm -rf "$TEMPDIR"

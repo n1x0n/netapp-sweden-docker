@@ -36,6 +36,7 @@ Sample command to create the service:
 docker service create \\
   --name percona_clone_1 \\
   --mount src=percona_clone_1,dst=/var/lib/mysql \\
+  --mount src=percona_clone_logs_1,dst=/var/log/mysql \\
   -p 3307:3306 \\
   percona:5.7.17
 
@@ -62,9 +63,11 @@ do
     i=$(( (i+1) %4 ))
     # Cloning volume for this service.
     docker volume create -d ontap-nas -o snapshotDir=false -o snapshotPolicy=default -o from=percona_orig --name percona_clone_${COUNTER} >/dev/null
+    docker volume create -d ontap-nas -o snapshotDir=false -o snapshotPolicy=default -o from=percona_logs_orig --name percona_clone_logs_${COUNTER} >/dev/null
     for NODE in $NODES
     do
         ssh ${NODE} docker volume create -d ontap-nas --name percona_clone_${COUNTER} >/dev/null
+        ssh ${NODE} docker volume create -d ontap-nas --name percona_clone_logs_${COUNTER} >/dev/null
     done
 
     # Creating the service
@@ -72,6 +75,7 @@ do
     docker service create \
         --name percona_clone_${COUNTER} \
         --mount src=percona_clone_${COUNTER},dst=/var/lib/mysql \
+        --mount src=percona_clone_logs_${COUNTER},dst=/var/log/mysql \
         -p ${PORT}:3306 \
         percona:5.7.17 >/dev/null
 
