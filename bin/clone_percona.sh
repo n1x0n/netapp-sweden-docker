@@ -64,11 +64,11 @@ do
     # Cloning volume for this service.
     docker volume create -d ontap-nas -o snapshotDir=false -o snapshotPolicy=default -o from=percona_orig --name percona_clone_${COUNTER} >/dev/null
     docker volume create -d ontap-nas -o snapshotDir=false -o snapshotPolicy=default -o from=percona_logs_orig --name percona_clone_logs_${COUNTER} >/dev/null
-    for NODE in $NODES
-    do
-        ssh ${NODE} docker volume create -d ontap-nas --name percona_clone_${COUNTER} >/dev/null
-        ssh ${NODE} docker volume create -d ontap-nas --name percona_clone_logs_${COUNTER} >/dev/null
-    done
+#    for NODE in $NODES
+#    do
+#        ssh ${NODE} docker volume create -d ontap-nas --name percona_clone_${COUNTER} >/dev/null
+#        ssh ${NODE} docker volume create -d ontap-nas --name percona_clone_logs_${COUNTER} >/dev/null
+#    done
 
     # Creating the service
     PORT=$(( 3306 + $COUNTER ))
@@ -96,4 +96,50 @@ echo
 echo "Total time for creating $NUM_CLONES clones: $( printf "%.3f" $TIME ) seconds"
 echo
 
+
+echo "Verifying that the databases are up and running"
+i=0
+SPINNER='|/-\'
+
+printf "\r(${SPINNER:$i:1}) "
+printf '.%.0s' $( eval echo {1..${NUM_CLONES}} )
+printf " (0/$NUM_CLONES)"
+
+COUNTER=0
+while [[ $COUNTER -lt $NUM_CLONES ]]
+do
+	PORT=$(( 3307 + $COUNTER ))
+	while true
+	do
+	        printf "\r(${SPINNER:$i:1}) "
+		printf '.%.0s' $( eval echo {1..${NUM_CLONES}} )
+		printf " ($COUNTER/$NUM_CLONES)"
+	        printf "\r(${SPINNER:$i:1}) "
+		printf '#%.0s' $( eval echo {1..${COUNTER}} ) 
+		mysqladmin -h swarm -P 3306 ping -u netapp -pnopass -s
+		if [[ $? = 0 ]]
+		then
+			break
+		fi
+		
+		sleep .2
+	done
+	COUNTER=$(( $COUNTER + 1 ))
+done
+
+printf "\r(${SPINNER:$i:1}) "
+printf '.%.0s' $( eval echo {1..${NUM_CLONES}} )
+printf " ($COUNTER/$NUM_CLONES)"
+printf "\r(${SPINNER:$i:1}) "
+printf '#%.0s' $( eval echo {1..${COUNTER}} ) 
+
+
+END=$(date +%s.%N)
+
+TIME=$(echo "$END - $START" | bc)
+
+echo
+echo
+echo "Total time for creating and starting $NUM_CLONES clones: $( printf "%.3f" $TIME ) seconds"
+echo
 
